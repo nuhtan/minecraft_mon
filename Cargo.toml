@@ -1,5 +1,5 @@
 [package]
-name = "minecraft_mon"
+name = "minecraft_monitor"
 version = "0.1.0"
 authors = ["Nathaniel Richardson <ncrichardson15@gmail.com>"]
 edition = "2018"
