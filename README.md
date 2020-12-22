@@ -49,3 +49,4 @@ Any .jar should work, default, bukkit, spigot, paper, tuinity. It should be easy
 7. A verbose mode?
 8. Have an option for what ip and port the web server are bound to, probably in the configuration file and arguments.
 9. Output should be logged.
+10. Http error's should contain page content so that the browser can still properly load.
