@@ -1,4 +1,6 @@
-extern crate minecraft_mon as monitor;
+//! Crate wide documentation?
+extern crate minecraft_monitor as mon;
+use mon::functions::web_server::handle_connections;
 
 use std::env;
 use std::io::{BufRead, BufReader, Write};
@@ -50,7 +52,7 @@ fn main() {
     // Spawn a thread to handle incoming connections
     let read_chat = Arc::clone(&chat);
     let connection_handle = thread::spawn(move || {
-        monitor::functions::web_server::handle_connections (
+        handle_connections (
             Arc::clone(&player_count),
             Arc::clone(&player_count_max),
             Arc::clone(&players),
