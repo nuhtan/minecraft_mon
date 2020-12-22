@@ -260,3 +260,11 @@ fn send_command(command: &str, web_sender: Sender<String>) -> String {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn sample() {
+        assert_eq!(2 + 2, 4, "sample message");
+    }
+}
