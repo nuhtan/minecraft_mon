@@ -76,7 +76,9 @@ fn generate_response(
             default_http_header,
             get_file_contents("/home.html")
         ),
-        "/data/players" => server_interactions::get_players(player_count, player_count_max, players),
+        "/data/players" => {
+            server_interactions::get_players(player_count, player_count_max, players)
+        }
         "/data/console" => server_interactions::get_console(chat),
         _ => {
             if request.len() > 11 as usize && &request[0..11] == "/data/send?" {

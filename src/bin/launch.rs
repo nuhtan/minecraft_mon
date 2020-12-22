@@ -56,7 +56,7 @@ fn main() {
     // Spawn a thread to handle incoming connections
     let read_chat = Arc::clone(&chat);
     let connection_handle = thread::spawn(move || {
-        handle_connections (
+        handle_connections(
             Arc::clone(&player_count),
             Arc::clone(&player_count_max),
             Arc::clone(&players),
