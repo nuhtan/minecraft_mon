@@ -37,6 +37,7 @@ Any .jar should work, default, bukkit, spigot, paper, tuinity. It should be easy
 
 ## Features that are in progress
 1. The current players does not update in anyway, I need to read console output to determine when a player joins or leaves. Issues arise as I think that server plugins can change the prefixes and suffixes for general chat so it might be possible that a player sending a message could be interpreted as a player leaving or joining as there is currently not any semblence of relation between different server outputs, ie. When a player joins a server there are typically three output messages but I need to verify that they are always together or potentially write a regex for the messages that references the current list of players.
+2. Restructure file to have helper functions in a seperate file.
 
 ## Planned changes for the future
 1. Add systems for setting the child arguments without having to recompile the project. This will include a configuartion file and arguments, arguments will be taken with precedence over the configuration file.
