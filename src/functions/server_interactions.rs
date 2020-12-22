@@ -11,10 +11,15 @@ use std::{
 /// # Examples
 ///
 ///```
+///use std::sync::Arc;
+///use std::sync::Mutex;
+///use minecraft_monitor::functions::server_interactions::get_players;
+///
 ///let count = 2;
 ///let max = 20;
-///let players = vec!["player1", "player2"];
-///println!("{}, get_players(Arc::new(Mutex::new(count)))");
+///let players = vec![String::from("player1"), String::from("player2")];
+///
+///println!("{}", get_players(Arc::new(Mutex::new(count)), Arc::new(Mutex::new(max)), Arc::new(Mutex::new(players))));
 ///```
 pub fn get_players(
     player_count: Arc<Mutex<i32>>,
