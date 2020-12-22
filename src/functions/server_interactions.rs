@@ -5,7 +5,8 @@ use std::{
 
 /// Returns a String, in JSON format, of the current player data from the minecraft server
 ///
-/// This function safely reads status variables from the minecraft server. All players are looped over to populate a string with JSON content.
+/// This function safely reads status variables from the minecraft server.
+/// All players are looped over to populate a string with JSON content.
 /// These variables are updated in [`main`] when players join or leave the server.
 ///
 /// # Examples
