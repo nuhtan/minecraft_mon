@@ -1,6 +1,7 @@
 //! Crate wide documentation?
 extern crate minecraft_monitor as mon;
 use mon::functions::web_server::handle_connections;
+use mon::functions::minecraft_related::*;
 
 use std::env;
 use std::io::{BufRead, BufReader, Write};
@@ -55,11 +56,14 @@ fn main() {
 
     // Spawn a thread to handle incoming connections
     let read_chat = Arc::clone(&chat);
+    let player_count_connection = player_count.clone();
+    let players_connection = players.clone();
+    let player_max_connection = player_count_max.clone();
     let connection_handle = thread::spawn(move || {
         handle_connections(
-            Arc::clone(&player_count),
-            Arc::clone(&player_count_max),
-            Arc::clone(&players),
+            Arc::clone(&player_count_connection),
+            Arc::clone(&player_max_connection),
+            Arc::clone(&players_connection),
             Arc::clone(&read_chat),
             web_sender.clone(),
         )
@@ -68,13 +72,16 @@ fn main() {
     // Server interaction happens below
     let output_handle = thread::spawn(move || {
         let chat = Arc::clone(&chat);
+        let current_players = Arc::clone(&players);
+        let current_player_count = Arc::clone(&player_count);
+        let max_concurrent_player_count = Arc::clone(&player_count_max);
         let mut line_num: u32 = 0;
         loop {
             let chat = Arc::clone(&chat);
             let mut buf = Vec::new();
             server_out.read_until(b'\n', &mut buf).unwrap();
             let line = String::from_utf8(buf).unwrap();
-            // let content = &line.clone()[17..];
+            let content = &line.clone()[17..];
             if line != "" {
                 let mut term = chat.lock().unwrap();
                 print!("\x1b[0;36m[Console]:\x1b[0m {}", line);
@@ -83,6 +90,45 @@ fn main() {
                     term.pop_back();
                 }
             }
+            // Check if a player has joined
+            if &content[0..10] == "There are " {
+                let list = &content[10..];
+                let current = list[0..list.find(" ").unwrap()].parse::<u32>().unwrap();
+                let latter = &list[list.find(" ").unwrap() + 13..];
+                // println!("Latter: {:?}, List: {:?}", latter, list);
+                let max = latter[0..latter.find(" ").unwrap()].parse::<u32>().unwrap();
+                // Verify current players
+                // Set/Update max player count
+                let mut pc_max = max_concurrent_player_count.lock().unwrap();
+                *pc_max = max;
+            } else {
+                match content.find(" ") {
+                    Some(loc) => {
+                        // Check for a user connecting
+                        let name = &content[0..loc];
+                        // println!("{:?}", &content[loc + 1..]);
+                        if valid_username(name) {
+                            if &content[loc + 1..content.len() - 1] == "joined the game" {
+                                let mut players_current = current_players.lock().unwrap();
+                                if !players_current.contains(&name.to_string()) {
+                                    players_current.push(name.to_string());
+                                    let mut pc = current_player_count.lock().unwrap();
+                                    *pc += 1;
+                                }
+                                // println!("Player may have joined the game?!");
+                                // if 
+                            }
+                        }
+    
+                        // Check for a user leaving
+    
+                    }
+                    None => {
+                        // There is no space and thus no way to match any of the possible 
+                    }
+                }
+            }
+            
             line_num += 1;
         }
     });

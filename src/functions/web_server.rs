@@ -12,8 +12,8 @@ use std::{
 use crate::functions::server_interactions;
 
 pub fn handle_connections(
-    player_count: Arc<Mutex<i32>>,
-    player_count_max: Arc<Mutex<i32>>,
+    player_count: Arc<Mutex<u32>>,
+    player_count_max: Arc<Mutex<u32>>,
     players: Arc<Mutex<Vec<String>>>,
     chat: Arc<Mutex<VecDeque<(u32, String)>>>,
     web_sender: Sender<String>,
@@ -61,8 +61,8 @@ pub fn handle_connections(
 
 fn generate_response(
     request: &str,
-    player_count: Arc<Mutex<i32>>,
-    player_count_max: Arc<Mutex<i32>>,
+    player_count: Arc<Mutex<u32>>,
+    player_count_max: Arc<Mutex<u32>>,
     players: Arc<Mutex<Vec<String>>>,
     chat: Arc<Mutex<VecDeque<(u32, String)>>>,
     web_sender: Sender<String>,
@@ -76,9 +76,7 @@ fn generate_response(
             default_http_header,
             get_file_contents("/home.html")
         ),
-        "/data/players" => {
-            server_interactions::get_players(player_count, player_count_max, players)
-        }
+        "/data/players" => server_interactions::get_players(player_count, player_count_max, players),
         "/data/console" => server_interactions::get_console(chat),
         _ => {
             if request.len() > 11 as usize && &request[0..11] == "/data/send?" {

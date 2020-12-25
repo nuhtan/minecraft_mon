@@ -23,8 +23,8 @@ use std::{
 ///println!("{}", get_players(Arc::new(Mutex::new(count)), Arc::new(Mutex::new(max)), Arc::new(Mutex::new(players))));
 ///```
 pub fn get_players(
-    player_count: Arc<Mutex<i32>>,
-    player_count_max: Arc<Mutex<i32>>,
+    player_count: Arc<Mutex<u32>>,
+    player_count_max: Arc<Mutex<u32>>,
     players: Arc<Mutex<Vec<String>>>,
 ) -> String {
     let pc = player_count.lock().unwrap();
