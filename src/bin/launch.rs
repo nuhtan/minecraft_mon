@@ -93,7 +93,7 @@ fn main() {
             // Check if a player has joined
             if &content[0..10] == "There are " {
                 let list = &content[10..];
-                let current = list[0..list.find(" ").unwrap()].parse::<u32>().unwrap();
+                // let current = list[0..list.find(" ").unwrap()].parse::<u32>().unwrap();
                 let latter = &list[list.find(" ").unwrap() + 13..];
                 // println!("Latter: {:?}, List: {:?}", latter, list);
                 let max = latter[0..latter.find(" ").unwrap()].parse::<u32>().unwrap();
@@ -104,10 +104,11 @@ fn main() {
             } else {
                 match content.find(" ") {
                     Some(loc) => {
-                        // Check for a user connecting
+                        // Do length checks to avoid exceptions
                         let name = &content[0..loc];
-                        // println!("{:?}", &content[loc + 1..]);
+                        // Player interaction
                         if valid_username(name) {
+                            // Player joining
                             if &content[loc + 1..content.len() - 1] == "joined the game" {
                                 let mut players_current = current_players.lock().unwrap();
                                 if !players_current.contains(&name.to_string()) {
@@ -115,20 +116,23 @@ fn main() {
                                     let mut pc = current_player_count.lock().unwrap();
                                     *pc += 1;
                                 }
-                                // println!("Player may have joined the game?!");
-                                // if 
+                            // Player leaving
+                            } else if &content[loc + 1..content.len() - 1] == "left the game" {
+                                let mut players_current = current_players.lock().unwrap();
+                                if players_current.contains(&name.to_string()) {
+                                    let loc = players_current.iter().position(|look| name == look).unwrap();
+                                    players_current.swap_remove(loc);
+                                    let mut pc = current_player_count.lock().unwrap();
+                                    *pc -= 1;
+                                }
                             }
                         }
-    
-                        // Check for a user leaving
-    
                     }
                     None => {
                         // There is no space and thus no way to match any of the possible 
                     }
                 }
             }
-            
             line_num += 1;
         }
     });
