@@ -1,42 +1,31 @@
 use std::{
-    collections::VecDeque,
     fs,
     io::{BufRead, BufReader, Write},
     net::TcpListener,
     path::Path,
-    sync::{mpsc::Sender, Arc, Mutex},
+    sync::mpsc::Sender,
     thread,
 };
 
 // Import the functions from the same level file
-use crate::functions::server_interactions;
+use super::server_interactions;
+use super::shared_data;
 
 pub fn handle_connections(
-    player_count: Arc<Mutex<u32>>,
-    player_count_max: Arc<Mutex<u32>>,
-    players: Arc<Mutex<Vec<String>>>,
-    chat: Arc<Mutex<VecDeque<(u32, String)>>>,
+    data: shared_data::ServerSharedData,
     web_sender: Sender<String>,
 ) -> std::io::Result<()> {
+    // let data1 = data.clone();
     loop {
         let listener = TcpListener::bind("0.0.0.0:8000")?;
-        let pc = player_count.clone();
-        let pcm = player_count_max.clone();
-        let p = players.clone();
-        let c = chat.clone();
+        let data2 = data.clone();
         let sender = web_sender.clone();
         // For each request create a thread to parse request and send contents
         for stream in listener.incoming() {
-            let pc = pc.clone();
-            let pcm = pcm.clone();
-            let p = p.clone();
-            let c = c.clone();
+            let data3 = data2.clone();
             let sender = sender.clone();
             thread::spawn(move || {
-                let pc = pc.clone();
-                let pcm = pcm.clone();
-                let p = p.clone();
-                let c = c.clone();
+                let data4 = data3.clone();
                 let sender = sender.clone();
                 let mut stream = stream.unwrap();
                 let mut reader = BufReader::new(stream.try_clone().unwrap());
@@ -47,7 +36,7 @@ pub fn handle_connections(
                     Some(start) => {
                         let request = &line[start..line.find("HTTP").unwrap() - 1];
                         stream
-                            .write_all(generate_response(request, pc, pcm, p, c, sender).as_bytes())
+                            .write_all(generate_response(request, data4, sender).as_bytes())
                             .unwrap();
                     }
                     None => {
@@ -61,10 +50,7 @@ pub fn handle_connections(
 
 fn generate_response(
     request: &str,
-    player_count: Arc<Mutex<u32>>,
-    player_count_max: Arc<Mutex<u32>>,
-    players: Arc<Mutex<Vec<String>>>,
-    chat: Arc<Mutex<VecDeque<(u32, String)>>>,
+    data: shared_data::ServerSharedData,
     web_sender: Sender<String>,
 ) -> String {
     let default_http_header = "HTTP/1.1 200 OK\r\nConnection: Close\r\nContent-Type:";
@@ -76,8 +62,12 @@ fn generate_response(
             default_http_header,
             get_file_contents("/home.html")
         ),
-        "/data/players" => server_interactions::get_players(player_count, player_count_max, players),
-        "/data/console" => server_interactions::get_console(chat),
+        "/data/players" => server_interactions::get_players(
+            data.current_player_count,
+            data.max_player_count,
+            data.current_players,
+        ),
+        "/data/console" => server_interactions::get_console(data.server_output),
         _ => {
             if request.len() > 11 as usize && &request[0..11] == "/data/send?" {
                 server_interactions::send_command(&request[10..], web_sender)

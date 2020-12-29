@@ -1,19 +1,16 @@
 //! Crate wide documentation?
 extern crate minecraft_monitor as mon;
 use mon::functions::minecraft_related::*;
+use mon::functions::shared_data::*;
 use mon::functions::web_server::handle_connections;
 
 use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
+use std::process::{Command, Stdio};
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use std::{
-    collections::VecDeque,
-    process::{Command, Stdio},
-};
 
 /// The function that launches the application.
 ///
@@ -28,10 +25,7 @@ use std::{
 fn main() {
     env::set_current_dir(Path::new("./server")).unwrap();
     let (web_sender, web_receiver) = mpsc::channel::<String>();
-    let player_count = Arc::new(Mutex::new(0));
-    let player_count_max = Arc::new(Mutex::new(0));
-    let players = Arc::new(Mutex::new(Vec::<String>::new()));
-    let chat = Arc::new(Mutex::new(VecDeque::<(u32, String)>::new()));
+    let shared_data = ServerSharedData::new();
 
     let mut child = Command::new("java")
         .args(&[
@@ -55,29 +49,17 @@ fn main() {
     );
 
     // Spawn a thread to handle incoming connections
-    let read_chat = Arc::clone(&chat);
-    let player_count_connection = player_count.clone();
-    let players_connection = players.clone();
-    let player_max_connection = player_count_max.clone();
-    let connection_handle = thread::spawn(move || {
-        handle_connections(
-            Arc::clone(&player_count_connection),
-            Arc::clone(&player_max_connection),
-            Arc::clone(&players_connection),
-            Arc::clone(&read_chat),
-            web_sender.clone(),
-        )
-    });
+    let shared_data_connection = shared_data.clone();
+    let connection_handle =
+        thread::spawn(move || handle_connections(shared_data_connection, web_sender.clone()));
 
     // Server interaction happens below
+    let shared_data_output = shared_data.clone();
     let output_handle = thread::spawn(move || {
-        let chat = Arc::clone(&chat);
-        let current_players = Arc::clone(&players);
-        let current_player_count = Arc::clone(&player_count);
-        let max_concurrent_player_count = Arc::clone(&player_count_max);
+        let data = shared_data_output.clone();
         let mut line_num: u32 = 0;
         loop {
-            let chat = Arc::clone(&chat);
+            let chat = data.server_output.clone();
             let mut buf = Vec::new();
             server_out.read_until(b'\n', &mut buf).unwrap();
             let line = String::from_utf8(buf).unwrap();
@@ -91,12 +73,7 @@ fn main() {
                 }
             }
             // Check if a player has joined
-            server_output_scanning(
-                content,
-                current_players.clone(),
-                current_player_count.clone(),
-                max_concurrent_player_count.clone(),
-            );
+            server_output_scanning(content, data.clone());
             line_num += 1;
         }
     });
@@ -119,6 +96,7 @@ fn main() {
         }
     });
 
+    // Can this be changed?
     match connection_handle.join() {
         Ok(test) => test.unwrap(),
         Err(_) => {
