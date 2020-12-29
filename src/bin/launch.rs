@@ -1,7 +1,7 @@
 //! Crate wide documentation?
 extern crate minecraft_monitor as mon;
-use mon::functions::web_server::handle_connections;
 use mon::functions::minecraft_related::*;
+use mon::functions::web_server::handle_connections;
 
 use std::env;
 use std::io::{BufRead, BufReader, Write};
@@ -91,48 +91,12 @@ fn main() {
                 }
             }
             // Check if a player has joined
-            if &content[0..10] == "There are " {
-                let list = &content[10..];
-                // let current = list[0..list.find(" ").unwrap()].parse::<u32>().unwrap();
-                let latter = &list[list.find(" ").unwrap() + 13..];
-                // println!("Latter: {:?}, List: {:?}", latter, list);
-                let max = latter[0..latter.find(" ").unwrap()].parse::<u32>().unwrap();
-                // Verify current players
-                // Set/Update max player count
-                let mut pc_max = max_concurrent_player_count.lock().unwrap();
-                *pc_max = max;
-            } else {
-                match content.find(" ") {
-                    Some(loc) => {
-                        // Do length checks to avoid exceptions
-                        let name = &content[0..loc];
-                        // Player interaction
-                        if valid_username(name) {
-                            // Player joining
-                            if &content[loc + 1..content.len() - 1] == "joined the game" {
-                                let mut players_current = current_players.lock().unwrap();
-                                if !players_current.contains(&name.to_string()) {
-                                    players_current.push(name.to_string());
-                                    let mut pc = current_player_count.lock().unwrap();
-                                    *pc += 1;
-                                }
-                            // Player leaving
-                            } else if &content[loc + 1..content.len() - 1] == "left the game" {
-                                let mut players_current = current_players.lock().unwrap();
-                                if players_current.contains(&name.to_string()) {
-                                    let loc = players_current.iter().position(|look| name == look).unwrap();
-                                    players_current.swap_remove(loc);
-                                    let mut pc = current_player_count.lock().unwrap();
-                                    *pc -= 1;
-                                }
-                            }
-                        }
-                    }
-                    None => {
-                        // There is no space and thus no way to match any of the possible 
-                    }
-                }
-            }
+            server_output_scanning(
+                content,
+                current_players.clone(),
+                current_player_count.clone(),
+                max_concurrent_player_count.clone(),
+            );
             line_num += 1;
         }
     });
