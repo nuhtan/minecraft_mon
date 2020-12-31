@@ -1,22 +1,5 @@
-{
-    "css": {
-        "files": [
-            "index.css"
-        ]
-    },
-    "html": {
-        "files": [
-            "home.html"
-        ]
-    },
-    "images": {
-        "files": [
-            
-        ]
-    },
-    "javascript": {
-        "files": [
-            "index.js"
-        ]
-    }
-}
+[
+    "index.css",
+    "home.html",
+    "index.js"
+]
