@@ -1,0 +1,34 @@
+{
+    "css": {
+        "directories": [
+
+        ],
+        "files": [
+            "index.css"
+        ]
+    },
+    "html": {
+        "directories": [
+
+        ],
+        "files": [
+            "home.html"
+        ]
+    },
+    "images": {
+        "directories": [
+
+        ],
+        "files": [
+            
+        ]
+    },
+    "javascript": {
+        "directories": [
+
+        ],
+        "files": [
+            "index.js"
+        ]
+    }
+}
