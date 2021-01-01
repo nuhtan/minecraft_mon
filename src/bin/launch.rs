@@ -1,5 +1,6 @@
 //! Crate wide documentation?
 extern crate minecraft_monitor as mon;
+use mon::functions::configuration::determine_config;
 use mon::functions::minecraft_related::*;
 use mon::functions::shared_data::*;
 use mon::functions::web_server::handle_connections;
@@ -23,6 +24,28 @@ use std::time::Duration;
 ///
 /// This section should contain details about how this function is launching everything
 fn main() {
+    match determine_config(env::args().collect()) {
+        Ok(work) => {
+            let (
+                address,
+                port,
+                root_location,
+                jar_name,
+                gen_args,
+                min_ram,
+                max_ram,
+                web_log,
+                verbosity,
+            ) = work;
+        }
+        Err(err) => {
+            println!("error found: {}", err)
+        }
+    }
+
+    return;
+
+    // TODO Refactor functions
     env::set_current_dir(Path::new("./server")).unwrap();
     let (web_sender, web_receiver) = mpsc::channel::<String>();
     let shared_data = ServerSharedData::new();
@@ -80,7 +103,8 @@ fn main() {
 
     let input_handle = thread::spawn(move || {
         loop {
-            match web_receiver.recv_timeout(Duration::from_millis(200)) {
+            // Sleeping per the tick rate, this might be slightly extreme for the purposes of this application
+            match web_receiver.recv_timeout(Duration::from_millis(50)) {
                 Ok(mut cmd) => {
                     cmd = cmd + "\n";
                     print!("\x1b[0;35m[Command]:\x1b[0m {}", cmd);

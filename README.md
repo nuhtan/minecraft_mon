@@ -39,6 +39,8 @@ target\release\minecraft_monitor.exe
 - Detect current os and determine what directory indicators to use (/) or (\\\\). I think that this will be primarily just detecting if Windows is being used. std::env::consts::OS should be used, this should be done once cli args and a config file works.
 - A release package should determine if the necessary files for operation are present. If there is no config file download a preset from the repo. If there is not public folder download the repo one. Check if the directory that should house the server exists, if not, create it and notify the user that the jar specified in the config should be placed in the folder.
 - Colors are most likely very broken on Windows, instead of adding colors for Windows they should be removed if ascii colors are not supported. Unless they are just invisible on Windows.
+- Multithreaded aspects might not be safe(?), reconfigure for sleep wake up. I might just change the lock to try_lock and either just keep trying or wait a 'tick'.
+- Add colored output to configuration/setup output.
 
 ## Completed Features
 - The current players does not update in anyway, I need to read console output to determine when a player joins or leaves. Issues arise as I think that server plugins can change the prefixes and suffixes for general chat so it might be possible that a player sending a message could be interpreted as a player leaving or joining as there is currently not any semblance of relation between different server outputs, ie. When a player joins a server there are typically three output messages but I need to verify that they are always together or potentially write a regex for the messages that references the current list of players.
