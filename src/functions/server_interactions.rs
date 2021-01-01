@@ -26,7 +26,7 @@ pub fn get_players(
     player_count: Arc<Mutex<u32>>,
     player_count_max: Arc<Mutex<u32>>,
     players: Arc<Mutex<Vec<String>>>,
-) -> String {
+) -> String { // FIXME Is this thread safe? I think that try_lock might be better
     let pc = player_count.lock().unwrap();
     let pcm = player_count_max.lock().unwrap();
     let p = players.lock().unwrap();
@@ -46,7 +46,7 @@ pub fn get_players(
 }
 
 pub fn get_console(chat: Arc<Mutex<VecDeque<(u32, String)>>>) -> String {
-    let chat = chat.lock().unwrap();
+    let chat = chat.lock().unwrap(); // FIXME try_lock?
     let mut log = format!("{{\"chat\": {{\n");
     for line in chat.iter() {
         log.push_str(

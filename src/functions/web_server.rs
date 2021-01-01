@@ -15,7 +15,6 @@ pub fn handle_connections(
     data: shared_data::ServerSharedData,
     web_sender: Sender<String>,
 ) -> std::io::Result<()> {
-    // let data1 = data.clone();
     loop {
         let listener = TcpListener::bind("0.0.0.0:8000")?;
         let data2 = data.clone();
