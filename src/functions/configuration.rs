@@ -1,4 +1,11 @@
-use std::{fs::{self, File}, io::{BufReader, Error, BufRead}, net::{Ipv4Addr, TcpStream}, path::Path, process::Command, thread};
+use std::{
+    fs::{self, File},
+    io::{BufRead, BufReader, Error},
+    net::{Ipv4Addr, TcpStream},
+    path::Path,
+    process::Command,
+    thread,
+};
 
 pub fn determine_config(
     args: Vec<String>,
@@ -6,6 +13,7 @@ pub fn determine_config(
     (
         Ipv4Addr,
         u16,
+        String,
         String,
         String,
         Option<String>,
@@ -21,18 +29,18 @@ pub fn determine_config(
     // Make sure that the public directory exists, if not, check with user, then download.
     // Check if a config file exists, if not, check with user, then download.
 
-    let mut address = "0.0.0.0".parse::<Ipv4Addr>().unwrap();
-    let mut port = 8000;
-    let mut web_index = String::from("/html/home.html");
-    let mut root_location = String::from("./server");
+    let mut address = None;
+    let mut port = None;
+    let mut web_index = None;
+    let mut root_location = None;
     let mut gen_args = None;
-    let mut jar_name = String::from("minecraft_server.jar");
-    let mut min_ram = String::from("1G");
-    let mut max_ram = String::from("2G");
-    let mut web_log = true;
-    let mut verbosity = Verbosity::None;
-    let mut download_public = true;
-    let mut download_config = true;
+    let mut jar_name = None;
+    let mut min_ram = None;
+    let mut max_ram = None;
+    let mut web_log = None;
+    let mut verbosity = None;
+    let mut download_public = None;
+    let mut download_config = None;
 
     match args.len() {
         0 => panic!("No file specified, this might not be needed"),
@@ -41,36 +49,42 @@ pub fn determine_config(
             // There exist args to be parsed
             for (index, arg) in args.iter().enumerate() {
                 if index % 2 == 1 && index != args.len() - 1 && index > 0 {
-                    // all args should fall on an even index as all require a second parameter
+                    // all args should fall on an odd index as all require a second parameter
                     match arg.as_str() {
                         "--location" | "-l" => {
-                            root_location = verify_location(args[index + 1].clone())
+                            root_location = Some(verify_location(args[index + 1].clone()))
                         }
-                        "--address" | "-a" => address = verify_address(args[index + 1].clone()),
-                        "--port" | "-p" => port = verify_port(args[index + 1].clone()),
-                        "--web_index" | "-i" => web_index = args[index + 1].clone(),
-                        "--jar" | "-j" => jar_name = verify_jar(args[index + 1].clone()),
-                        "--min" | "-m" => min_ram = verify_min_ram(args[index + 1].clone()),
-                        "--max" | "-M" => max_ram = verify_max_ram(args[index + 1].clone()),
+                        "--address" | "-a" => {
+                            address = Some(verify_address(args[index + 1].clone()))
+                        }
+                        "--port" | "-p" => port = Some(verify_port(args[index + 1].clone())),
+                        "--web_index" | "-i" => web_index = Some(args[index + 1].clone()),
+                        "--jar" | "-j" => jar_name = Some(verify_jar(args[index + 1].clone())),
+                        "--min" | "-m" => min_ram = Some(verify_min_ram(args[index + 1].clone())),
+                        "--max" | "-M" => max_ram = Some(verify_max_ram(args[index + 1].clone())),
                         "--download_webdir" | "-w" => {
-                            download_public = verify_download_web(args[index + 1].clone())
+                            download_public = Some(verify_download_web(args[index + 1].clone()))
                         }
                         "--download_config" | "-c" => {
                             // true or false
-                            download_config = match args[index + 1].as_str() {
+                            download_config = Some(match args[index + 1].as_str() {
                                 "true" => true,
                                 "false" => false,
                                 _ => panic!(
                                     "Boolean not found for download configuration, found: {}",
                                     args[index + 1]
                                 ),
-                            };
+                            });
                         }
-                        "--log_web" | "-o" => web_log = verify_web_log(args[index + 1].clone()),
+                        "--log_web" | "-o" => {
+                            web_log = Some(verify_web_log(args[index + 1].clone()))
+                        }
                         "--verbosity" | "-v" => {
-                            verbosity = verify_verbosity(args[index + 1].clone())
+                            verbosity = Some(verify_verbosity(args[index + 1].clone()))
                         }
-                        "--args" | "-x" => gen_args = verify_general_args(args[index + 1].clone()),
+                        "--args" | "-x" => {
+                            gen_args = Some(verify_general_args(args[index + 1].clone()))
+                        }
                         _ => panic!("Invalid parameter found, found: {}", *arg),
                     }
                 } else if index % 2 == 1 && index != 0 {
@@ -84,32 +98,14 @@ pub fn determine_config(
         }
     };
     // Command Line Arguments should have been parsed and error checked
-
+    if download_config == None { // If not set, do not download
+        download_config = Some(false);
+    }
     // Parse through a config file if it exists
     let config_path = Path::new("../config.conf");
-    if config_path.exists() {
-        // read through config file, notify of parsing and formatting errors
-        let mut reader = BufReader::new(File::open("../config.conf").unwrap());
-        for (index, line) in reader.lines().enumerate() {
-            let line = line.unwrap(); // Not sure what errors could happen here
-            if !(&line[0..1] == "#") && line != "" { // Comments and blank lines are ignored
-                let equal = match line.find("=") {
-                    Some(loc) => loc,
-                    None => panic!("Line within configuration file does not contain '=', all settings should contain this character. Line: {} contains an error", index)
-                };
-                match &line[0..equal] {
-                    "server_location" => {},
-                    "webserver_address" => {},
-                    "webserver_port" => {},
-                    // TODO Finish reading config file
-
-                    _ => {}
-                }
-            }
-        }
-    } else {
+    if !config_path.exists() {
         // No file exists check if a default one should be downloaded
-        if download_config {
+        if download_config.unwrap() {
             let mut config_curl = Command::new("curl")
                 .arg("-s")
                 .arg("https://raw.githubusercontent.com/nuhtan/minecraft_monitor/main/config.conf")
@@ -121,9 +117,118 @@ pub fn determine_config(
         }
     }
 
+    // read through config file, notify of parsing and formatting errors
+    let reader = BufReader::new(File::open("../config.conf").unwrap());
+    for (index, line) in reader.lines().enumerate() {
+        let line = line.unwrap(); // Not sure what errors could happen here
+        if !(&line[0..1] == "#") && line != "" {
+            // Comments and blank lines are ignored
+            let equal = match line.find("=") {
+                    Some(loc) => loc,
+                    None => panic!("Line within configuration file does not contain '=', all settings should contain this character. Line: {} contains an error", index)
+                };
+            match &line[0..equal] {
+                "server_location" => {
+                    if root_location == None {
+                        root_location = Some(verify_location(args[index + 1].clone()));
+                    }
+                }
+                "webserver_address" => {
+                    if address == None {
+                        address = Some(verify_address(args[index + 1].clone()));
+                    }
+                }
+                "webserver_port" => {
+                    if port == None {
+                        port = Some(verify_port(args[index + 1].clone()));
+                    }
+                }
+                "webserver_index" => {
+                    if web_index == None {
+                        web_index = Some(args[index + 1].clone());
+                    }
+                }
+                "generic_args" => {
+                    if gen_args == None {
+                        gen_args = Some(verify_general_args(args[index + 1].clone()));
+                    }
+                }
+                "server_jar" => {
+                    if jar_name == None {
+                        jar_name = Some(verify_jar(args[index + 1].clone()));
+                    }
+                }
+                "minimum_ram" => {
+                    if min_ram == None {
+                        min_ram = Some(verify_min_ram(args[index + 1].clone()));
+                    }
+                }
+                "maximum_ram" => {
+                    if max_ram == None {
+                        max_ram = Some(verify_max_ram(args[index + 1].clone()));
+                    }
+                }
+                "download_public" => {
+                    if download_public == None {
+                        download_public = Some(verify_download_web(args[index + 1].clone()));
+                    }
+                }
+                "log_web" => {
+                    if web_log == None {
+                        web_log = Some(verify_web_log(args[index + 1].clone()));
+                    }
+                }
+                "verbosity" => {
+                    if verbosity == None {
+                        verbosity = Some(verify_verbosity(args[index + 1].clone()));
+                    }
+                }
+                _ => {
+                    panic!("Unexpected config found on line: {}, found: {}. If this line was intended to be a comment please prefix the line with a '#'", index, line)
+                }
+            }
+        }
+    }
+
+    // If a parameter has not been set then use the default
+    if root_location == None {
+        root_location = Some("./server".to_string());
+    }
+    if address == None {
+        address = Some("127.0.0.1".parse::<Ipv4Addr>().unwrap());
+    }
+    if port == None {
+        port = Some(8000);
+    }
+    if web_index == None {
+        web_index = Some("/html/home.html".to_string());
+    }
+    if gen_args == None {
+        gen_args = Some(None);
+    }
+    if jar_name == None {
+        jar_name = Some("minecraft_server.1.16.4.jar".to_string());
+    }
+    if min_ram == None {
+        min_ram = Some("1G".to_string());
+    }
+    if max_ram == None {
+        max_ram = Some("2G".to_string());
+    }
+    if download_public == None {
+        download_public = Some(false);
+    }
+    if web_log == None {
+        web_log = Some(false);
+    }
+    if verbosity == None {
+        verbosity = Some(Verbosity::None);
+    }
+
+    // Download and determine if the web dir exists
     if !Path::new("../public").exists() {
         // No folder exists check if a default one should be downloaded
-        if download_public {
+        if download_public.unwrap() {
             // Create public directory
             match fs::create_dir("public") {
                 Ok(_) => {
@@ -192,18 +297,20 @@ pub fn determine_config(
     }
 
     Ok((
-        address,
-        port,
-        root_location,
-        jar_name,
-        gen_args,
-        min_ram,
-        max_ram,
-        web_log,
-        verbosity,
+        address.unwrap(),
+        port.unwrap(),
+        web_index.unwrap(),
+        root_location.unwrap(),
+        jar_name.unwrap(),
+        gen_args.unwrap(),
+        min_ram.unwrap(),
+        max_ram.unwrap(),
+        web_log.unwrap(),
+        verbosity.unwrap(),
     ))
 }
 
+#[derive(PartialEq)]
 pub enum Verbosity {
     None,
     Mine,
@@ -231,7 +338,7 @@ fn verify_location(arg: String) -> String {
         return arg;
     } else {
         panic!(
-            "Specified .jar file does not exist, path: {}",
+            "Specified directory does not exist, path: {}",
             path.display()
         );
     }
@@ -331,4 +438,3 @@ fn verify_download_web(arg: String) -> bool {
         ),
     };
 }
-
