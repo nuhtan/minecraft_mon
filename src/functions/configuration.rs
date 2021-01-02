@@ -98,7 +98,8 @@ pub fn determine_config(
         }
     };
     // Command Line Arguments should have been parsed and error checked
-    if download_config == None { // If not set, do not download
+    if download_config == None {
+        // If not set, do not download
         download_config = Some(false);
     }
     // Parse through a config file if it exists
