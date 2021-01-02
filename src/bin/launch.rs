@@ -29,6 +29,7 @@ fn main() {
             let (
                 address,
                 port,
+                web_index,
                 root_location,
                 jar_name,
                 gen_args,
