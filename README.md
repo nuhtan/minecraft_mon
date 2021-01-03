@@ -23,19 +23,17 @@ target\release\minecraft_monitor.exe
 \*This tool expects a 'server' directory to contain the server jar. Any .jar should work, default, bukkit, spigot, paper, tuinity. For all cases change the child args in [main.rs](src/main.rs). This process will change in the future to support both a configuration file and args.
 
 ## Features that are in progress
-- Add systems for setting the child arguments without having to recompile the project. This will include a configuration file and arguments, arguments will be taken with precedence over the configuration file.
+- There is no way to restart the server.
+- A verbose mode?
+- Output should be logged.
+- Length checking for detecting when a player joins or leaves.
+- Read when the minecraft server has finished starting, Done (time)! and then execute the list command to get the max player count.
 
 ## Planned changes for the future
 - Shutting down the server does not exit the application which is the intended use case. Maybe
-- There is no way to restart the server.
 - There is currently no ui in the web server.
 - Have releases for the project on github.
-- A verbose mode?
-- Have an option for what ip and port the web server are bound to, probably in the configuration file and arguments.
-- Output should be logged.
 - Http error's should contain page content so that the browser can still properly load.
-- Length checking for detecting when a player joins or leaves.
-- Read when the minecraft server has finished starting, Done (time)! and then execute the list command to get the max player count.
 - Detect current os and determine what directory indicators to use (/) or (\\\\). I think that this will be primarily just detecting if Windows is being used. std::env::consts::OS should be used, this should be done once cli args and a config file works.
 - A release package should determine if the necessary files for operation are present. If there is no config file download a preset from the repo. If there is not public folder download the repo one. Check if the directory that should house the server exists, if not, create it and notify the user that the jar specified in the config should be placed in the folder.
 - Colors are most likely very broken on Windows, instead of adding colors for Windows they should be removed if ascii colors are not supported. Unless they are just invisible on Windows.
@@ -47,6 +45,8 @@ target\release\minecraft_monitor.exe
 - Restructure file to have helper functions in a separate file.
 - Extract reading server lines to the minecraft_related.rs file, player joining and leaving is a target for this.
 - Refactor the data contained in Arc<Mutex<>>'s, the handle_connections() function is a mess, I think that using a struct would be the ideal solution but that introduces explicit runtimes of which I have no experience.
+- Add systems for setting the child arguments without having to recompile the project. This will include a configuration file and arguments, arguments will be taken with precedence over the configuration file.
+- Have an option for what ip and port the web server are bound to, probably in the configuration file and arguments.
 
 ## Other notes
 - If running in WSL 2 please note that ports are no longer automatically forwarded to Windows, also note that now that WSL is more akin to a hypervisor the ip address will change on both WSL and Windows restarts. Binding a single address can be done with: 
