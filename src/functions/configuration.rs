@@ -1,7 +1,7 @@
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Error},
-    net::{Ipv4Addr, TcpStream},
+    net::{Ipv4Addr},
     path::Path,
     process::Command,
     thread,
@@ -103,7 +103,7 @@ pub fn determine_config(
         download_config = Some(false);
     }
     // Parse through a config file if it exists
-    let config_path = Path::new("../config.conf");
+    let config_path = Path::new("config.conf");
     if !config_path.exists() {
         // No file exists check if a default one should be downloaded
         if download_config.unwrap() {
@@ -119,69 +119,77 @@ pub fn determine_config(
     }
 
     // read through config file, notify of parsing and formatting errors
-    let reader = BufReader::new(File::open("../config.conf").unwrap());
+    let reader = BufReader::new(File::open("config.conf").unwrap());
     for (index, line) in reader.lines().enumerate() {
         let line = line.unwrap(); // Not sure what errors could happen here
-        if !(&line[0..1] == "#") && line != "" {
+        if line != "" && !(&line[0..1] == "#") {
             // Comments and blank lines are ignored
             let equal = match line.find("=") {
                     Some(loc) => loc,
                     None => panic!("Line within configuration file does not contain '=', all settings should contain this character. Line: {} contains an error", index)
                 };
+            // println!("0..=: {}, =..:{}", &line[0..equal], &line[equal + 2..line.len() - 1]);
             match &line[0..equal] {
                 "server_location" => {
                     if root_location == None {
-                        root_location = Some(verify_location(args[index + 1].clone()));
+                        root_location =
+                            Some(verify_location(line[equal + 2..line.len() - 1].to_string()));
                     }
                 }
                 "webserver_address" => {
                     if address == None {
-                        address = Some(verify_address(args[index + 1].clone()));
+                        address = Some(verify_address(line[equal + 2..line.len() - 1].to_string()));
                     }
                 }
                 "webserver_port" => {
                     if port == None {
-                        port = Some(verify_port(args[index + 1].clone()));
+                        port = Some(verify_port(line[equal + 2..line.len() - 1].to_string()));
                     }
                 }
                 "webserver_index" => {
                     if web_index == None {
-                        web_index = Some(args[index + 1].clone());
+                        web_index = Some(line[equal + 2..line.len() - 1].to_string());
                     }
                 }
                 "generic_args" => {
                     if gen_args == None {
-                        gen_args = Some(verify_general_args(args[index + 1].clone()));
+                        gen_args = Some(verify_general_args(
+                            line[equal + 2..line.len() - 1].to_string(),
+                        ));
                     }
                 }
                 "server_jar" => {
                     if jar_name == None {
-                        jar_name = Some(verify_jar(args[index + 1].clone()));
+                        jar_name = Some(verify_jar(line[equal + 2..line.len() - 1].to_string()));
                     }
                 }
                 "minimum_ram" => {
                     if min_ram == None {
-                        min_ram = Some(verify_min_ram(args[index + 1].clone()));
+                        min_ram = Some(verify_min_ram(line[equal + 2..line.len() - 1].to_string()));
                     }
                 }
                 "maximum_ram" => {
                     if max_ram == None {
-                        max_ram = Some(verify_max_ram(args[index + 1].clone()));
+                        max_ram = Some(verify_max_ram(line[equal + 2..line.len() - 1].to_string()));
                     }
                 }
                 "download_public" => {
                     if download_public == None {
-                        download_public = Some(verify_download_web(args[index + 1].clone()));
+                        download_public = Some(verify_download_web(
+                            line[equal + 2..line.len() - 1].to_string(),
+                        ));
                     }
                 }
                 "log_web" => {
                     if web_log == None {
-                        web_log = Some(verify_web_log(args[index + 1].clone()));
+                        web_log = Some(verify_web_log(line[equal + 2..line.len() - 1].to_string()));
                     }
                 }
                 "verbosity" => {
                     if verbosity == None {
-                        verbosity = Some(verify_verbosity(args[index + 1].clone()));
+                        verbosity = Some(verify_verbosity(
+                            line[equal + 2..line.len() - 1].to_string(),
+                        ));
                     }
                 }
                 _ => {
@@ -311,7 +319,7 @@ pub fn determine_config(
     ))
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum Verbosity {
     None,
     Mine,
@@ -346,11 +354,10 @@ fn verify_location(arg: String) -> String {
 }
 fn verify_jar(arg: String) -> String {
     let path = Path::new(&arg);
-    if path.exists() {
-        let extension = path.extension();
-        match extension {
+    let extension = path.extension();
+    match extension {
             Some(ext) => {
-                if ext == ".jar" {
+                if ext == "jar" {
                     return arg;
                 } else {
                     panic!("The file specified should be a .jar, found: {:?}", ext);
@@ -358,12 +365,6 @@ fn verify_jar(arg: String) -> String {
             },
             None => panic!("The specified file either has no name or has no extension. Expecting a .jar extension.")
         }
-    } else {
-        panic!(
-            "Specified .jar file does not exist, path: {}",
-            path.display()
-        );
-    }
 }
 
 fn verify_general_args(arg: String) -> Option<String> {
@@ -374,19 +375,20 @@ fn verify_general_args(arg: String) -> Option<String> {
 }
 
 fn verify_min_ram(arg: String) -> String {
+    println!("{}", arg);
     let data_size = arg.chars().last().unwrap();
     match data_size {
         'K' | 'M' | 'G' => {
-            return match arg[0..arg.len() - 2].parse::<u32>() {
+            return match arg[0..arg.len() - 1].parse::<u32>() {
                 Ok(_) => arg,
                 Err(_) => panic!(
                     "Invalid number found for minimum allocated ram, found: {}",
-                    &arg[0..arg.len() - 2]
+                    &arg[0..arg.len() - 1]
                 ),
             };
         }
         _ => panic!(
-            "Invalid data size found for minimum allocated ram, found: {}",
+            "Invalid data size found for minimum allocated ram, found: {:?}",
             data_size
         ),
     }
@@ -396,11 +398,11 @@ fn verify_max_ram(arg: String) -> String {
     let data_size = arg.chars().last().unwrap();
     match data_size {
         'K' | 'M' | 'G' => {
-            return match arg[0..arg.len() - 2].parse::<u32>() {
+            return match arg[0..arg.len() - 1].parse::<u32>() {
                 Ok(_) => arg,
                 Err(_) => panic!(
                     "Invalid number found for maximum alloram, found: {}",
-                    &arg[0..arg.len() - 2]
+                    &arg[0..arg.len() - 1]
                 ),
             };
         }
