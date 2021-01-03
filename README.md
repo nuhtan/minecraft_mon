@@ -23,14 +23,12 @@ target\release\minecraft_monitor.exe
 \*This tool expects a 'server' directory to contain the server jar. Any .jar should work, default, bukkit, spigot, paper, tuinity. For all cases change the child args in [main.rs](src/main.rs). This process will change in the future to support both a configuration file and args.
 
 ## Features that are in progress
-- There is no way to restart the server.
 - A verbose mode?
 - Output should be logged.
 - Length checking for detecting when a player joins or leaves.
 - Read when the minecraft server has finished starting, Done (time)! and then execute the list command to get the max player count.
 
 ## Planned changes for the future
-- Shutting down the server does not exit the application which is the intended use case. Maybe
 - There is currently no ui in the web server.
 - Have releases for the project on github.
 - Http error's should contain page content so that the browser can still properly load.
@@ -47,6 +45,8 @@ target\release\minecraft_monitor.exe
 - Refactor the data contained in Arc<Mutex<>>'s, the handle_connections() function is a mess, I think that using a struct would be the ideal solution but that introduces explicit runtimes of which I have no experience.
 - Add systems for setting the child arguments without having to recompile the project. This will include a configuration file and arguments, arguments will be taken with precedence over the configuration file.
 - Have an option for what ip and port the web server are bound to, probably in the configuration file and arguments.
+- There is no way to restart the server.
+- Shutting down the server does not exit the application which is the intended use case. Maybe
 
 ## Other notes
 - If running in WSL 2 please note that ports are no longer automatically forwarded to Windows, also note that now that WSL is more akin to a hypervisor the ip address will change on both WSL and Windows restarts. Binding a single address can be done with: 
