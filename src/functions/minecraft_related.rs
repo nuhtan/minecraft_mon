@@ -22,7 +22,7 @@ pub fn server_output_scanning(line_content: &str, data: shared_data::ServerShare
         // Set/Update max player count
         let mut pc_max = data.max_player_count.lock().unwrap(); // FIXME try_lock?
         *pc_max = max;
-    } else if &line_content[0..6] == "Done ("{
+    } else if &line_content[0..6] == "Done (" {
         let exc = line_content.find(")!").unwrap();
         if &line_content[exc..] == ")! For help, type \"help\"\n" {
             let mut state = data.mcserver_state.lock().unwrap();

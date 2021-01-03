@@ -1,7 +1,7 @@
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Error},
-    net::{Ipv4Addr},
+    net::Ipv4Addr,
     path::Path,
     process::Command,
     thread,

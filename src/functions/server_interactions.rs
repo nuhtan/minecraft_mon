@@ -1,4 +1,9 @@
-use std::{collections::VecDeque, sync::{mpsc::Sender, Arc, Mutex}, thread, time::Duration};
+use std::{
+    collections::VecDeque,
+    sync::{mpsc::Sender, Arc, Mutex},
+    thread,
+    time::Duration,
+};
 
 use super::shared_data::{GeneralState, MinecraftServerState};
 
@@ -25,7 +30,8 @@ pub fn get_players(
     player_count: Arc<Mutex<u32>>,
     player_count_max: Arc<Mutex<u32>>,
     players: Arc<Mutex<Vec<String>>>,
-) -> String { // FIXME Is this thread safe? I think that try_lock might be better
+) -> String {
+    // FIXME Is this thread safe? I think that try_lock might be better
     let pc = player_count.lock().unwrap();
     let pcm = player_count_max.lock().unwrap();
     let p = players.lock().unwrap();
@@ -81,7 +87,11 @@ pub fn send_command(command: &str, web_sender: Sender<String>) -> String {
 }
 
 // TODO extract the beginning to its own function and simplify shutdown and restart
-pub fn shutdown(mc_state: Arc<Mutex<MinecraftServerState>>, gen_state: Arc<Mutex<GeneralState>>, web_sender: Sender<String>) -> String {
+pub fn shutdown(
+    mc_state: Arc<Mutex<MinecraftServerState>>,
+    gen_state: Arc<Mutex<GeneralState>>,
+    web_sender: Sender<String>,
+) -> String {
     // First send command to shutdown minecraft server if it is running, wait until state becomes Off
     let reference_mc_state = mc_state.lock().unwrap().clone();
     if reference_mc_state == MinecraftServerState::Running {
@@ -92,7 +102,7 @@ pub fn shutdown(mc_state: Arc<Mutex<MinecraftServerState>>, gen_state: Arc<Mutex
             thread::sleep(Duration::from_millis(500));
             let current_mc_state = mc_state.lock().unwrap();
             if *current_mc_state != MinecraftServerState::Off {
-                break
+                break;
             } // Wait until the server has shutdown
             println!("Release control.");
         }
@@ -105,7 +115,11 @@ pub fn shutdown(mc_state: Arc<Mutex<MinecraftServerState>>, gen_state: Arc<Mutex
     return "HTTP/1.1 201 Created\r\nContent-Type: text/plain\r\nConnection: Close".to_string();
 }
 
-pub fn restart(mc_state: Arc<Mutex<MinecraftServerState>>, gen_state: Arc<Mutex<GeneralState>>, web_sender: Sender<String>) -> String {
+pub fn restart(
+    mc_state: Arc<Mutex<MinecraftServerState>>,
+    gen_state: Arc<Mutex<GeneralState>>,
+    web_sender: Sender<String>,
+) -> String {
     let reference_mc_state = mc_state.lock().unwrap().clone();
     if reference_mc_state == MinecraftServerState::Running {
         send_command("?stop", web_sender);
@@ -113,10 +127,9 @@ pub fn restart(mc_state: Arc<Mutex<MinecraftServerState>>, gen_state: Arc<Mutex<
             thread::sleep(Duration::from_millis(500)); // Check every half second if the mc server has shutdown
             let current_mc_state = mc_state.lock().unwrap();
             if *current_mc_state != MinecraftServerState::Off {
-                break
+                break;
             } // Wait until the server has shutdown
         }
-        
     }
     // Minecraft server should now be shutdown
     // change gen state to shutdown

@@ -103,14 +103,18 @@ fn launch(
     }
 
     let mut mcserver_out = BufReader::new(
-        child.stdout.take().expect("[Error] Failed to open server output")
+        child
+            .stdout
+            .take()
+            .expect("[Error] Failed to open server output"),
     );
 
     let shared_data_output = shared_data.clone();
     let output_handle = thread::spawn(move || {
         let mut line_num: u32 = 0;
         loop {
-            { // If the server is trying to restart exit the output thread to the minecraft server
+            {
+                // If the server is trying to restart exit the output thread to the minecraft server
                 let mc_state = shared_data_output.mcserver_state.lock().unwrap();
                 if *mc_state == MinecraftServerState::Off {
                     let mut state = shared_data_output.gen_state.lock().unwrap();
@@ -145,7 +149,8 @@ fn launch(
     let shared_data_input = shared_data.clone();
     let input_handle = thread::spawn(move || {
         loop {
-            { // If the server is trying to restart exit the input thread to the minecraft server
+            {
+                // If the server is trying to restart exit the input thread to the minecraft server
                 let mc_state = shared_data_input.mcserver_state.lock().unwrap();
                 if *mc_state == MinecraftServerState::Off {
                     let mut state = shared_data_input.gen_state.lock().unwrap();
