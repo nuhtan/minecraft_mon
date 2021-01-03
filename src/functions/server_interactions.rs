@@ -1,7 +1,6 @@
-use std::{
-    collections::VecDeque,
-    sync::{mpsc::Sender, Arc, Mutex},
-};
+use std::{collections::VecDeque, sync::{mpsc::Sender, Arc, Mutex}, thread, time::Duration};
+
+use super::shared_data::{GeneralState, MinecraftServerState};
 
 /// Returns a String, in JSON format, of the current player data from the minecraft server
 ///
@@ -79,6 +78,51 @@ pub fn send_command(command: &str, web_sender: Sender<String>) -> String {
                 .to_string()
         }
     }
+}
+
+// TODO extract the beginning to its own function and simplify shutdown and restart
+pub fn shutdown(mc_state: Arc<Mutex<MinecraftServerState>>, gen_state: Arc<Mutex<GeneralState>>, web_sender: Sender<String>) -> String {
+    // First send command to shutdown minecraft server if it is running, wait until state becomes Off
+    let reference_mc_state = mc_state.lock().unwrap().clone();
+    if reference_mc_state == MinecraftServerState::Running {
+        println!("Sending shutdown");
+        send_command("?stop", web_sender);
+        loop {
+            println!("Start sleep");
+            thread::sleep(Duration::from_millis(500));
+            let current_mc_state = mc_state.lock().unwrap();
+            if *current_mc_state != MinecraftServerState::Off {
+                break
+            } // Wait until the server has shutdown
+            println!("Release control.");
+        }
+    }
+    println!("Made it");
+    // Minecraft server should now be shutdown
+    // change gen state to shutdown
+    let mut ref_gen_state = gen_state.lock().unwrap();
+    *ref_gen_state = GeneralState::ShutDown;
+    return "HTTP/1.1 201 Created\r\nContent-Type: text/plain\r\nConnection: Close".to_string();
+}
+
+pub fn restart(mc_state: Arc<Mutex<MinecraftServerState>>, gen_state: Arc<Mutex<GeneralState>>, web_sender: Sender<String>) -> String {
+    let reference_mc_state = mc_state.lock().unwrap().clone();
+    if reference_mc_state == MinecraftServerState::Running {
+        send_command("?stop", web_sender);
+        loop {
+            thread::sleep(Duration::from_millis(500)); // Check every half second if the mc server has shutdown
+            let current_mc_state = mc_state.lock().unwrap();
+            if *current_mc_state != MinecraftServerState::Off {
+                break
+            } // Wait until the server has shutdown
+        }
+        
+    }
+    // Minecraft server should now be shutdown
+    // change gen state to shutdown
+    let mut ref_gen_state = gen_state.lock().unwrap();
+    *ref_gen_state = GeneralState::Restart;
+    return "HTTP/1.1 201 Created\r\nContent-Type: text/plain\r\nConnection: Close".to_string();
 }
 
 #[cfg(test)]
