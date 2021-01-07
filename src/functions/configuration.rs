@@ -115,6 +115,8 @@ pub fn determine_config(
                 .expect("Error?");
             config_curl.wait()?;
             println!("Config file downloaded");
+        } else {
+            panic!("No configuration found and not allowed to download config. Run with '-c true' to enable downloading of the config file");
         }
     }
 
@@ -241,11 +243,11 @@ pub fn determine_config(
             // Create public directory
             match fs::create_dir("public") {
                 Ok(_) => {
-                    let mut config_curl = Command::new("curl").arg("-s").arg("https://raw.githubusercontent.com/nuhtan/minecraft_monitor/main/public/manifest.json").arg("-O").spawn().expect("Error?");
+                    let mut config_curl = Command::new("curl").arg("-s").arg("https://raw.githubusercontent.com/nuhtan/minecraft_monitor/main/public/manifest.json").arg("-o").arg(format!("public/manifest.json")).spawn().expect("Error?");
                     config_curl.wait()?;
                     println!("Manifest file downloaded");
                     // Read manifest
-                    let manifest = fs::read_to_string("manifest.json").unwrap();
+                    let manifest = fs::read_to_string("public/manifest.json").unwrap();
                     if manifest == "404: Not Found" {
                         panic!("Manifest was improperly downloaded, report to repo.");
                     }
@@ -304,6 +306,12 @@ pub fn determine_config(
             }
         }
     }
+    // Check if the specified jar file is within the specified server directory
+    let temp = format!("{}/{}", root_location.clone().unwrap(), jar_name.clone().unwrap());
+    let jar_check = Path::new(&temp);
+    if !jar_check.exists() {
+        panic!("All of your configuration is correct but the specified jar file was not found in the specified server folder, expected: {}", jar_check.display());
+    }
 
     Ok((
         address.unwrap(),
@@ -319,7 +327,7 @@ pub fn determine_config(
     ))
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Verbosity {
     None,
     Mine,
@@ -344,12 +352,14 @@ fn verify_port(arg: String) -> u16 {
 fn verify_location(arg: String) -> String {
     let path = Path::new(&arg);
     if path.exists() {
-        return arg;
+        return arg
     } else {
-        panic!(
-            "Specified directory does not exist, path: {}",
+        println!(
+            "Specified directory for the Minecraft server does not exist, now creating path: {}",
             path.display()
         );
+        fs::create_dir_all(&arg).unwrap();
+        return arg
     }
 }
 fn verify_jar(arg: String) -> String {
@@ -375,7 +385,6 @@ fn verify_general_args(arg: String) -> Option<String> {
 }
 
 fn verify_min_ram(arg: String) -> String {
-    println!("{}", arg);
     let data_size = arg.chars().last().unwrap();
     match data_size {
         'K' | 'M' | 'G' => {
