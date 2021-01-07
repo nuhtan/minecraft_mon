@@ -107,7 +107,6 @@ pub fn shutdown(
             println!("Release control.");
         }
     }
-    println!("Made it");
     // Minecraft server should now be shutdown
     // change gen state to shutdown
     let mut ref_gen_state = gen_state.lock().unwrap();
