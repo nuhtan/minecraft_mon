@@ -32,6 +32,7 @@ pub enum MinecraftServerState {
     Off,
     Starting,
     Running,
+    Eula
 }
 
 #[derive(Clone, Copy, PartialEq)]

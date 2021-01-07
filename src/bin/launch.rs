@@ -4,7 +4,6 @@ use mon::functions::configuration::{determine_config, Verbosity};
 use mon::functions::minecraft_related::*;
 use mon::functions::shared_data::*;
 use mon::functions::web_server::handle_connections;
-
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -14,6 +13,7 @@ use std::time::Duration;
 use std::{env, net::Ipv4Addr};
 
 fn main() {
+    // Create a writer that will write content to a file, only interactions that happen from this software will be logged, Minecraft logs itself
     let (
         address,
         port,
@@ -23,11 +23,13 @@ fn main() {
         gen_args,
         min_ram,
         max_ram,
-        _web_log,   // If interactions with the webserver should be saved to a log
-        _verbosity, // Currently this is not set up
+        web_log,   // If interactions with the webserver should be saved to a log
+        verbosity, // Currently this is not set up
     ) = determine_config(env::args().collect()).unwrap();
 
     env::set_current_dir(Path::new(&root_location)).unwrap();
+    // Logger::new(); // TODO Logging will be hard
+
     let shared_data = ServerSharedData::new();
     // call launch with shared data
     loop {
@@ -40,8 +42,8 @@ fn main() {
             gen_args.clone(),
             min_ram.clone(),
             max_ram.clone(),
-            _web_log.clone(),
-            _verbosity.clone(),
+            web_log.clone(),
+            verbosity.clone(),
         );
         let mut state = shared_data.gen_state.lock().unwrap();
         if *state == GeneralState::Restart {
@@ -65,13 +67,22 @@ fn launch(
     gen_args: Option<String>,
     min_ram: String,
     max_ram: String,
-    _web_log: bool,
-    _verbosity: Verbosity,
+    web_log: bool,
+    verbosity: Verbosity,
 ) {
     let (web_sender, web_receiver) = mpsc::channel::<String>();
     let shared_data_web = shared_data.clone();
+    let web_sender_clone = web_sender.clone();
     let web_handle = thread::spawn(move || {
-        handle_connections(shared_data_web, web_sender, address, port, web_index).unwrap()
+        handle_connections(
+            shared_data_web,
+            web_sender_clone,
+            address,
+            port,
+            web_index,
+            verbosity,
+        )
+        .unwrap()
     });
 
     let mut child;
@@ -102,6 +113,7 @@ fn launch(
             .expect("Error starting server, refer to console for more details.");
     }
 
+    // Output section
     let mut mcserver_out = BufReader::new(
         child
             .stdout
@@ -110,9 +122,13 @@ fn launch(
     );
 
     let shared_data_output = shared_data.clone();
+    let output_verbosity = verbosity.clone(); // This might not be needed because COPY has been derived now
+    let output_sender = web_sender.clone();
     let output_handle = thread::spawn(move || {
         let mut line_num: u32 = 0;
+        let output_sender_thread = output_sender.clone();
         loop {
+            // let output_sender3 = output_sender2.clone();
             {
                 // If the server is trying to restart exit the output thread to the minecraft server
                 let mc_state = shared_data_output.mcserver_state.lock().unwrap();
@@ -124,31 +140,37 @@ fn launch(
                         *state = GeneralState::Restart;
                         break;
                     }
-                    println!("Off but running");
                 }
             }
             let chat = shared_data_output.server_output.clone();
             let mut buf = Vec::new();
             mcserver_out.read_until(b'\n', &mut buf).unwrap();
             let line = String::from_utf8(buf).unwrap();
-            let content = &line.clone()[17..];
-            if line != "" {
-                let mut term = chat.lock().unwrap();
-                print!("\x1b[0;36m[Console]:\x1b[0m {}", line);
-                term.push_front((line_num, line));
-                while term.len() > 1000 {
-                    term.pop_back();
+            if line != "".to_string() {
+                let content = &line.clone()[17..];
+                if line != "" {
+                    let mut term = chat.lock().unwrap();
+                    if output_verbosity == Verbosity::Mine || verbosity == Verbosity::MineWeb {
+                        print!("\x1b[0;36m[Console]:\x1b[0m {}", line);
+                    }
+                    term.push_front((line_num, line));
+                    while term.len() > 1000 {
+                        term.pop_back();
+                    }
                 }
+                // Check if a player has joined
+                server_output_scanning(content, shared_data_output.clone(), &output_sender_thread);
+                line_num += 1;
             }
-            // Check if a player has joined
-            server_output_scanning(content, shared_data_output.clone());
-            line_num += 1;
         }
     });
 
+    // Input section
     let shared_data_input = shared_data.clone();
+    let input_verbosity = verbosity.clone();
     let input_handle = thread::spawn(move || {
         loop {
+            // let verbosity = verbosity.clone();
             {
                 // If the server is trying to restart exit the input thread to the minecraft server
                 let mc_state = shared_data_input.mcserver_state.lock().unwrap();
@@ -166,7 +188,9 @@ fn launch(
             match web_receiver.recv_timeout(Duration::from_millis(50)) {
                 Ok(mut cmd) => {
                     cmd = cmd + "\n";
-                    print!("\x1b[0;35m[Command]:\x1b[0m {}", cmd);
+                    if input_verbosity == Verbosity::Mine || input_verbosity == Verbosity::MineWeb {
+                        print!("\x1b[0;35m[Command]:\x1b[0m {}", cmd);
+                    }
                     {
                         let server_in = child.stdin.as_mut().unwrap();
                         server_in.write_all(cmd.as_bytes()).unwrap();
@@ -179,7 +203,16 @@ fn launch(
         }
     });
 
-    web_handle.join().unwrap();
     output_handle.join().unwrap();
+    if verbosity == Verbosity::Mine || verbosity == Verbosity::MineWeb {
+        println!("Minecraft Server Output Thread Closed");
+    }
     input_handle.join().unwrap();
+    if verbosity == Verbosity::Mine || verbosity == Verbosity::MineWeb {
+        println!("Minecraft Server Input Thread Closed");
+    }
+    web_handle.join().unwrap();
+    if verbosity == Verbosity::Web || verbosity == Verbosity::MineWeb {
+        println!("Web Server Thread Closed");
+    }
 }

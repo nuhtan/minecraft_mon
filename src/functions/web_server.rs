@@ -7,18 +7,20 @@ use std::{
     thread,
 };
 
-use shared_data::GeneralState;
+use shared_data::{GeneralState, MinecraftServerState};
 
 // Import the functions from the same level file
-use super::server_interactions;
+use super::{configuration::Verbosity, server_interactions};
 use super::shared_data;
 
+// TODO The names of variables within this function are atrocious
 pub fn handle_connections(
     data: shared_data::ServerSharedData,
     web_sender: Sender<String>,
     address: Ipv4Addr,
     port: u16,
     root_html: String,
+    verbosity: Verbosity
 ) -> std::io::Result<()> {
     // loop {
     let listener = TcpListener::bind((address, port))?;
@@ -26,7 +28,6 @@ pub fn handle_connections(
     let sender = web_sender.clone();
     // For each request create a thread to parse request and send contents
     for stream in listener.incoming() {
-        println!("web");
         let data3 = data2.clone();
         let sender = sender.clone();
         let root_html = root_html.clone();
@@ -43,11 +44,13 @@ pub fn handle_connections(
                 Some(start) => {
                     let request = &line[start..line.find("HTTP").unwrap() - 1];
                     stream
-                        .write_all(generate_response(request, data4, sender, root_html).as_bytes())
+                        .write_all(generate_response(request, data4, sender, root_html, verbosity).as_bytes())
                         .unwrap();
                 }
                 None => {
-                    println!("\x1b[0;33m[Request]:\x1b[0m Empty Request Received");
+                    if verbosity == Verbosity::Web || verbosity == Verbosity::MineWeb {
+                        println!("\x1b[0;33m[Request]:\x1b[0m Empty Request Received");
+                    }
                 }
             }
         });
@@ -67,10 +70,18 @@ fn generate_response(
     data: shared_data::ServerSharedData,
     web_sender: Sender<String>,
     root_html: String,
+    verbosity: Verbosity
 ) -> String {
     let default_http_header = "HTTP/1.1 200 OK\r\nConnection: Close\r\nContent-Type:";
     let headers404 = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nConnection: Close";
-    println!("\x1b[0;33m[Request]:\x1b[0m {}", request);
+    if verbosity == Verbosity::Web || verbosity == Verbosity::MineWeb {
+        println!("\x1b[0;33m[Request]:\x1b[0m {}", request);
+    }
+    let eula_data = data.clone();
+    let eula_state = eula_data.mcserver_state.lock().unwrap();
+    if *eula_state == MinecraftServerState::Eula {
+        return format!("{} text/html\r\n\r\n{}", default_http_header, get_file_contents("../public/html/eula.html"))
+    }
     match request {
         "/" => format!(
             "{} text/html\r\n\r\n{}",
@@ -86,7 +97,7 @@ fn generate_response(
         "/data/shutdown" => {
             server_interactions::shutdown(data.mcserver_state, data.gen_state, web_sender)
         }
-        "/data/restart" => {
+        "/data/restart" | "/data/send?stop" => {
             server_interactions::restart(data.mcserver_state, data.gen_state, web_sender)
         }
         _ => {
@@ -126,7 +137,6 @@ fn get_file_type(path: &str) -> &str {
 
 fn get_file_folder(path: &str) -> &str {
     let ext = &path[path.find(".").unwrap()..];
-    // println!("{} - {}", path, ext);
     match ext {
         ".html" => "html",
         ".css" => "css",
