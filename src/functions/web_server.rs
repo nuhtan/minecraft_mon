@@ -77,10 +77,16 @@ fn generate_response(
     if verbosity == Verbosity::Web || verbosity == Verbosity::MineWeb {
         println!("\x1b[0;33m[Request]:\x1b[0m {}", request);
     }
-    let eula_data = data.clone();
-    let eula_state = eula_data.mcserver_state.lock().unwrap();
-    if *eula_state == MinecraftServerState::Eula {
-        return format!("{} text/html\r\n\r\n{}", default_http_header, get_file_contents("../public/html/eula.html"))
+    let start_data = data.clone();
+    let start_state = start_data.mcserver_state.lock().unwrap();
+    if *start_state == MinecraftServerState::Eula {
+        return match request {
+            "/eula.css" => format!("{} {}\r\n\r\n{}", default_http_header, get_file_type("eula.css"), get_file_contents("/eula.css")),
+            "/eula.js" => format!("{} {}\r\n\r\n{}", default_http_header, get_file_type("eula.js"), get_file_contents("/eula.js")),
+            _ => format!("{} {}\r\n\r\n{}", default_http_header, get_file_type("eula.html"), get_file_contents("/eula.html"))
+        }
+    } else if *start_state == MinecraftServerState::Starting {
+        return format!("{} text/html\r\n\r\n{}", default_http_header, get_file_contents("/starting.html"))
     }
     match request {
         "/" => format!(
@@ -127,6 +133,8 @@ fn get_file_type(path: &str) -> &str {
     let ext = &path[path.find(".").unwrap()..];
     match ext {
         ".html" => "text/html",
+        ".css" => "text/css",
+        ".js" => "text/javascript",
         ".png" => "image/png",
         ".jpg" | ".jpeg" => "image/jpeg",
         ".gif" => "image/gif",

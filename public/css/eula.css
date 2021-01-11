@@ -1,0 +1,42 @@
+.flex-grid {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 500px;
+}
+
+.col {
+    width: 32%;
+}
+
+.row {
+    height: 30%;
+}
+
+.vert {
+    flex-direction: column;
+}
+
+.centered {
+    margin-top: 10px;
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, 0%);
+    border-radius: 10px;
+    background-color: seagreen;
+    box-shadow: -3px -3px 4px rgb(179, 179, 179);
+    border-color: transparent;
+}
+
+.white-text {
+    color: white;
+}
+
+.content {
+    background-color: rgb(241, 241, 241);
+    border-radius: 10px;
+    padding: 2px;
+    padding-top: 12px;
+    text-align: center;
+    box-shadow: -4px -4px 5px rgb(179, 179, 179);
+}

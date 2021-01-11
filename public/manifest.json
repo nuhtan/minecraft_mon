@@ -1,6 +1,8 @@
 [
     "index.css",
+    "eula.css",
     "eula.html",
     "home.html",
-    "index.js"
+    "index.js",
+    "eula.js"
 ]

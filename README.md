@@ -30,6 +30,7 @@ target\release\minecraft_monitor.exe
 - If the EULA needs to be accepted send any web requests to a page telling them to accept the EULA, this can either be done by changing the file themselves or including a button on the page that will modify the file.
 
 ## Planned changes for the future
+- Detect if the EULA has been accepted, button to accept. This is still the user accepting the EULA and the are still
 - There is currently no ui in the web server.
 - Have releases for the project on github.
 - Http error's should contain page content so that the browser can still properly load.
@@ -38,7 +39,7 @@ target\release\minecraft_monitor.exe
 - Add colored output to configuration/setup output.
 
 ## Features that have been put off for now
-- Another thread to handle in console commands. Not sure how to do this due to the blocking nature of getting input in console.
+- Another thread to handle in console commands. Not sure how to do this due to the blocking nature of getting input in console. Specifically to do with shutting down. (Maybe just ending with a message saying to press enter to shutdown)
 - Output should be logged. Getting date and time with only the Unix epoch seems rather hard, the other option is to use the date command for the system. Maybe just append the output of the date command to the top of each file. The ideal would be for the file name to be the date.
 
 ## Completed Features
