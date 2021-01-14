@@ -20,7 +20,7 @@ pub fn handle_connections(
     address: Ipv4Addr,
     port: u16,
     root_html: String,
-    verbosity: Verbosity
+    verbosity: Verbosity,
 ) -> std::io::Result<()> {
     // loop {
     let listener = TcpListener::bind((address, port))?;
@@ -70,23 +70,33 @@ fn generate_response(
     data: shared_data::ServerSharedData,
     web_sender: Sender<String>,
     root_html: String,
-    verbosity: Verbosity
+    verbosity: Verbosity,
 ) -> String {
     let default_http_header = "HTTP/1.1 200 OK\r\nConnection: Close\r\nContent-Type:";
     let headers404 = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nConnection: Close";
     if verbosity == Verbosity::Web || verbosity == Verbosity::MineWeb {
         println!("\x1b[0;33m[Request]:\x1b[0m {}", request);
     }
-    let start_data = data.clone();
-    let start_state = start_data.mcserver_state.lock().unwrap();
-    if *start_state == MinecraftServerState::Eula {
-        return match request {
-            "/eula.css" => format!("{} {}\r\n\r\n{}", default_http_header, get_file_type("eula.css"), get_file_contents("/eula.css")),
-            "/eula.js" => format!("{} {}\r\n\r\n{}", default_http_header, get_file_type("eula.js"), get_file_contents("/eula.js")),
-            _ => format!("{} {}\r\n\r\n{}", default_http_header, get_file_type("eula.html"), get_file_contents("/eula.html"))
+    { // Reduce the space that the shared data is in scope, this should be replaced with try locks later
+        let ref_state;
+        {
+            let start_data = data.clone();
+            let start_state = start_data.mcserver_state.lock().unwrap();
+            ref_state = start_state.clone();
         }
-    } else if *start_state == MinecraftServerState::Starting {
-        return format!("{} text/html\r\n\r\n{}", default_http_header, get_file_contents("/starting.html"))
+        if ref_state == MinecraftServerState::Eula {
+            return match request {
+                "/api/accept" => {
+                    server_interactions::accept_eula(data)
+                },
+                "/api/restart" => server_interactions::restart(data.mcserver_state, data.gen_state, web_sender),
+                "/eula.css" => format!("{} {}\r\n\r\n{}", default_http_header, get_file_type("eula.css"), get_file_contents("/eula.css")), // This line could be turned into a function of its own
+                "/eula.js" => format!("{} {}\r\n\r\n{}", default_http_header, get_file_type("eula.js"), get_file_contents("/eula.js")),
+                _ => format!("{} {}\r\n\r\n{}", default_http_header, get_file_type("eula.html"), get_file_contents("/eula.html"))
+            }
+        } else if ref_state == MinecraftServerState::Starting {
+            return format!("{} {}\r\n\r\n{}", default_http_header, get_file_type("starting.html"), get_file_contents("/starting.html"))
+        }
     }
     match request {
         "/" => format!(
@@ -94,20 +104,20 @@ fn generate_response(
             default_http_header,
             get_file_contents(root_html.as_str())
         ),
-        "/data/players" => server_interactions::get_players(
+        "/api/players" => server_interactions::get_players(
             data.current_player_count,
             data.max_player_count,
             data.current_players,
         ),
-        "/data/console" => server_interactions::get_console(data.server_output),
-        "/data/shutdown" => {
+        "/api/console" => server_interactions::get_console(data.server_output),
+        "/api/shutdown" => {
             server_interactions::shutdown(data.mcserver_state, data.gen_state, web_sender)
         }
-        "/data/restart" | "/data/send?stop" => {
+        "/api/restart" | "/data/send?stop" => {
             server_interactions::restart(data.mcserver_state, data.gen_state, web_sender)
-        }
+        },
         _ => {
-            if request.len() > 11 as usize && &request[0..11] == "/data/send?" {
+            if request.len() > 11 as usize && &request[0..11] == "/api/send?" {
                 server_interactions::send_command(&request[10..], web_sender)
             } else {
                 if Path::new(
