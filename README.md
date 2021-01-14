@@ -27,7 +27,6 @@ target\release\minecraft_monitor.exe
 - Length checking for detecting when a player joins or leaves.
 - A release package should determine if the necessary files for operation are present. If there is no config file download a preset from the repo. If there is not public folder download the repo one. Check if the directory that should house the server exists, if not, create it and notify the user that the jar specified in the config should be placed in the folder.
 - Multi threaded aspects might not be safe(?), reconfigure for sleep wake up. I might just change the lock to try_lock and either just keep trying or wait a 'tick'.
-- If the EULA needs to be accepted send any web requests to a page telling them to accept the EULA, this can either be done by changing the file themselves or including a button on the page that will modify the file.
 
 ## Planned changes for the future
 - Detect if the EULA has been accepted, button to accept. This is still the user accepting the EULA and the are still
@@ -52,6 +51,7 @@ target\release\minecraft_monitor.exe
 - There is no way to restart the server.
 - Shutting down the server does not exit the application which is the intended use case. Maybe
 - Read when the minecraft server has finished starting, Done (time)! and then execute the list command to get the max player count.
+- If the EULA needs to be accepted send any web requests to a page telling them to accept the EULA, this can either be done by changing the file themselves or including a button on the page that will modify the file.
 
 ## Other notes
 - If running in WSL 2 please note that ports are no longer automatically forwarded to Windows, also note that now that WSL is more akin to a hypervisor the ip address will change on both WSL and Windows restarts. Binding a single address can be done with: 
