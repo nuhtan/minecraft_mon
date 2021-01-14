@@ -1,4 +1,8 @@
-function accept() {
-    const response = await fetch(`${window.location.hostname}/data/accept`);
-    console.log(response);
+async function accept() {
+    await fetch('/api/accept');
+    // refresh the page
+    setTimeout(() => {
+        location.reload();
+    }, 2500);
+
 }
