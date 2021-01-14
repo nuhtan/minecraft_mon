@@ -132,14 +132,19 @@ fn launch(
             {
                 // If the server is trying to restart exit the output thread to the minecraft server
                 let mc_state = shared_data_output.mcserver_state.lock().unwrap();
+                // println!("Checking state in output");
                 if *mc_state == MinecraftServerState::Off {
                     let mut state = shared_data_output.gen_state.lock().unwrap();
-                    if *state == GeneralState::Restart {
+                    if *state == GeneralState::Restart || *state == GeneralState::ShutDown {
                         break;
                     } else if *state == GeneralState::Running {
                         *state = GeneralState::Restart;
                         break;
                     }
+                }
+                let state = shared_data_output.gen_state.lock().unwrap();
+                if *mc_state == MinecraftServerState::Eula && *state == GeneralState::Restart {
+                    break;
                 }
             }
             let chat = shared_data_output.server_output.clone();
@@ -176,12 +181,17 @@ fn launch(
                 let mc_state = shared_data_input.mcserver_state.lock().unwrap();
                 if *mc_state == MinecraftServerState::Off {
                     let mut state = shared_data_input.gen_state.lock().unwrap();
-                    if *state == GeneralState::Restart {
+                    println!("Checking state in input");
+                    if *state == GeneralState::Restart || *state == GeneralState::ShutDown {
                         break;
                     } else if *state == GeneralState::Running {
                         *state = GeneralState::Restart;
                         break;
                     }
+                }
+                let state = shared_data_input.gen_state.lock().unwrap();
+                if *mc_state == MinecraftServerState::Eula && *state == GeneralState::Restart {
+                    break;
                 }
             }
             // Sleeping per the tick rate, this might be slightly extreme for the purposes of this application

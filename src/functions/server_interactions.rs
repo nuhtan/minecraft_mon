@@ -1,11 +1,6 @@
-use std::{
-    collections::VecDeque,
-    sync::{mpsc::Sender, Arc, Mutex},
-    thread,
-    time::Duration,
-};
+use std::{collections::VecDeque, fs, sync::{mpsc::Sender, Arc, Mutex}, thread, time::Duration};
 
-use super::shared_data::{GeneralState, MinecraftServerState};
+use super::shared_data::{self, GeneralState, MinecraftServerState};
 
 /// Returns a String, in JSON format, of the current player data from the minecraft server
 ///
@@ -101,7 +96,7 @@ pub fn shutdown(
             println!("Start sleep");
             thread::sleep(Duration::from_millis(500));
             let current_mc_state = mc_state.lock().unwrap();
-            if *current_mc_state != MinecraftServerState::Off {
+            if *current_mc_state == MinecraftServerState::Off {
                 break;
             } // Wait until the server has shutdown
             println!("Release control.");
@@ -119,13 +114,15 @@ pub fn restart(
     gen_state: Arc<Mutex<GeneralState>>,
     web_sender: Sender<String>,
 ) -> String {
+    println!("Restarting?");
     let reference_mc_state = mc_state.lock().unwrap().clone();
     if reference_mc_state == MinecraftServerState::Running {
+        println!("Running, trying to close");
         send_command("?stop", web_sender);
         loop {
             thread::sleep(Duration::from_millis(500)); // Check every half second if the mc server has shutdown
             let current_mc_state = mc_state.lock().unwrap();
-            if *current_mc_state != MinecraftServerState::Off {
+            if *current_mc_state == MinecraftServerState::Off {
                 break;
             } // Wait until the server has shutdown
         }
@@ -134,7 +131,26 @@ pub fn restart(
     // change gen state to shutdown
     let mut ref_gen_state = gen_state.lock().unwrap();
     *ref_gen_state = GeneralState::Restart;
+    println!("Finish restart");
     return "HTTP/1.1 201 Created\r\nContent-Type: text/plain\r\nConnection: Close".to_string();
+}
+
+pub fn accept_eula(
+    data: shared_data::ServerSharedData,
+) -> String {
+    let current_mc_state = data.mcserver_state.lock().unwrap();
+    if *current_mc_state == MinecraftServerState::Eula { // This is the only state where this function should ever occur.
+        // Modify the eula file, change false to true
+        // Restart the server, restarting has 
+        let current_eula = fs::read_to_string("eula.txt").unwrap();
+        let new_eula = current_eula.replace("false", "true");
+        fs::write("eula.txt", new_eula).unwrap();
+        let mut ref_gen_state = data.gen_state.lock().unwrap();
+        *ref_gen_state = GeneralState::Restart;
+        return "HTTP/1.1 201 Created\r\nContent-Type: text/plain\r\nConnection: Close".to_string();
+    } else {
+        return "HTTP/1.1 201 Created\r\nContent-Type: text/plain\r\nConnection: Close".to_string(); // Change to return an error thing
+    }
 }
 
 #[cfg(test)]
