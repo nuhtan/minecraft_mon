@@ -31,7 +31,7 @@ pub fn get_players(
     let pcm = player_count_max.lock().unwrap();
     let p = players.lock().unwrap();
     let mut data = format!(
-        "{{\"playerCount\": \"{}\", \"playerCountMax\": \"{}\", \"player\": [",
+        "{{\"playerCount\": \"{}\", \"playerCountMax\": \"{}\", \"players\": [",
         pc, pcm
     );
     for player in p.iter() {
