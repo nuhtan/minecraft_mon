@@ -1,11 +1,4 @@
-use std::{
-    fs,
-    io::{BufRead, BufReader, Write},
-    net::{Ipv4Addr, TcpListener},
-    path::Path,
-    sync::mpsc::Sender,
-    thread,
-};
+use std::{fs, io::{BufRead, BufReader, Write}, net::{Ipv4Addr, SocketAddr, TcpListener}, path::Path, sync::mpsc::Sender, thread};
 
 use shared_data::{GeneralState, MinecraftServerState};
 
@@ -44,7 +37,7 @@ pub fn handle_connections(
                 Some(start) => {
                     let request = &line[start..line.find("HTTP").unwrap() - 1];
                     stream
-                        .write_all(generate_response(request, data4, sender, root_html, verbosity).as_bytes())
+                        .write_all(generate_response(request, data4, sender, root_html, verbosity, stream.peer_addr().unwrap()).as_bytes())
                         .unwrap();
                 }
                 None => {
@@ -71,11 +64,12 @@ fn generate_response(
     web_sender: Sender<String>,
     root_html: String,
     verbosity: Verbosity,
+    peer_address: SocketAddr
 ) -> String {
     let default_http_header = "HTTP/1.1 200 OK\r\nConnection: Close\r\nContent-Type:";
     let headers404 = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nConnection: Close";
     if verbosity == Verbosity::Web || verbosity == Verbosity::MineWeb {
-        println!("\x1b[0;33m[Request]:\x1b[0m {}", request);
+        println!("\x1b[0;33m[\x1b[32m{}\x1b[0;33m]:\x1b[0m {}",  peer_address.to_string(), request);
     }
     { // Reduce the space that the shared data is in scope, this should be replaced with try locks later
         let ref_state;
@@ -117,8 +111,8 @@ fn generate_response(
             server_interactions::restart(data.mcserver_state, data.gen_state, web_sender)
         },
         _ => {
-            if request.len() > 11 as usize && &request[0..11] == "/api/send?" {
-                server_interactions::send_command(&request[10..], web_sender)
+            if request.len() > 10 as usize && &request[0..10] == "/api/send?" {
+                server_interactions::send_command(&request[9..], web_sender)
             } else {
                 if Path::new(
                     format!("../public/{}/{}", get_file_folder(request), &request[1..]).as_str(),
