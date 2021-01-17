@@ -3,16 +3,29 @@
 
 <head>
     <meta charset='utf-8'>
-    <title>Accept Eula</title>
+    <title>Server Starting</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <link rel="stylesheet" href="eula.css">
-    <script src='eula.js'></script>
 </head>
+
 <body>
-    Server is still starting, please wait. In future version this should automatically refresh...
+    <div class="flex-grid">
+        <div class="col"></div>
+        <div class="col">
+            <div class="flex-grid vert">
+                <div class="row"></div>
+                <div class="row content">
+                    The server is currently starting, this page will refresh every second until the server has started.
+                </div>
+                <div class="row"></div>
+            </div>
+        </div>
+        <div class="col"></div>
+    </div>
     <script>
         setTimeout(() => {
             location.reload();
         }, 1000);
     </script>
+    <script src='eula.js'></script>
 </body>
